@@ -1,0 +1,44 @@
+{
+    "name": "ami-praha/ai-item-finder",
+    "description": "Laravel package for finding the most similar item from a list using LLM",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "AMI Praha a.s.",
+            "email": "info@ami.cz"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/http": "^10.0|^11.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0",
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AmiPraha\\AiItemFinder\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AmiPraha\\AiItemFinder\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AmiPraha\\AiItemFinder\\AiItemFinderServiceProvider"
+            ],
+            "aliases": {
+                "AiItemFinder": "AmiPraha\\AiItemFinder\\Facades\\AiItemFinder"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
