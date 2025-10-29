@@ -1,4 +1,4 @@
-# AI Closest Item Finder
+# AI Item Finder
 
 A Laravel package that uses Large Language Models (LLM) to find the closest matching item from a list. This package leverages OpenAI's GPT models to perform intelligent matching based on semantic similarity rather than simple string matching.
 
