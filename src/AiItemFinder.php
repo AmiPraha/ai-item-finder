@@ -125,7 +125,32 @@ class AiItemFinder
             throw new Exception('Empty response from OpenAI API.');
         }
 
-        return json_decode($content, true);
+        $pickedItem = json_decode($content, true);
+
+        $this->validatePickedItem($pickedItem);
+
+        return $pickedItem;
+    }
+
+    /**
+     * Validate the picked item
+     *
+     * @param array $pickedItem The picked item
+     * @throws Exception
+     */
+    protected function validatePickedItem(array $pickedItem): void
+    {
+        if (!is_array($pickedItem)) {
+            throw new Exception('Picked item is not a valid array. Please report this to the package author.');
+        }
+
+        if (!array_key_exists($this->searchedItemKey, $pickedItem)) {
+            throw new Exception('Picked item does not contain the searched item key. Please report this to the package author.');
+        }
+
+        if (!collect($this->list)->contains(fn($item) => $item[$this->searchedItemKey] === $pickedItem[$this->searchedItemKey])) {
+            throw new Exception('Picked item is not in the provided list. Please report this to the package author.');
+        }
     }
 
     /**
@@ -153,15 +178,13 @@ class AiItemFinder
             return $this->systemMessage;
         }
 
-        $message = 'You are helpful assistant who picks the most similar item from a json list below to a provided json list item.';
+        $systemMessage = 'You are helpful assistant who picks the most similar item from a provided json list to a provided json list item. Choose only from the provided list, never invent any non existing item.';
 
         if (!empty($this->additionalInstructions)) {
-            $message .= PHP_EOL . $this->additionalInstructions;
+            $systemMessage .= PHP_EOL . $this->additionalInstructions;
         }
 
-        $message .= PHP_EOL . 'List: ' . json_encode($this->list, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        return $message;
+        return $systemMessage;
     }
 
     /**
@@ -169,9 +192,11 @@ class AiItemFinder
      */
     protected function getUserMessage(): string
     {
-        return 'List item: ' . json_encode(
-            [$this->searchedItemKey => $this->searchedItemValue],
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
+        return 'List: ' . json_encode($this->list, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            . PHP_EOL
+            . 'List item: ' . json_encode(
+                [$this->searchedItemKey => $this->searchedItemValue],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
     }
 }
