@@ -3,8 +3,10 @@
 namespace AmiPraha\AiItemFinder\Tests\Feature;
 
 use AmiPraha\AiItemFinder\AiItemFinder;
+use AmiPraha\AiItemFinder\Exceptions\InvalidApiResponseException;
+use AmiPraha\AiItemFinder\Exceptions\InvalidConfigurationException;
+use AmiPraha\AiItemFinder\Exceptions\InvalidInputException;
 use AmiPraha\AiItemFinder\Tests\TestCase;
-use Exception;
 use Illuminate\Support\Facades\Http;
 
 class AiItemFinderTest extends TestCase
@@ -211,7 +213,7 @@ class AiItemFinderTest extends TestCase
     /** @test */
     public function it_throws_exception_when_api_key_is_missing(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessage('OpenAI API key is missing');
 
         config(['ai-item-finder.openai_api_key' => null]);
@@ -222,7 +224,7 @@ class AiItemFinderTest extends TestCase
     /** @test */
     public function it_throws_exception_when_list_is_empty(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidInputException::class);
         $this->expectExceptionMessage('List is not set');
 
         $finder = new AiItemFinder();
@@ -232,7 +234,7 @@ class AiItemFinderTest extends TestCase
     /** @test */
     public function it_throws_exception_when_searched_item_is_not_set(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidInputException::class);
         $this->expectExceptionMessage('Searched item is not set');
 
         $finder = new AiItemFinder();
@@ -242,7 +244,7 @@ class AiItemFinderTest extends TestCase
     /** @test */
     public function it_throws_exception_for_invalid_confidence_threshold(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessage('No result confidence threshold must be between 0 and 100');
 
         $finder = new AiItemFinder();
@@ -252,7 +254,7 @@ class AiItemFinderTest extends TestCase
     /** @test */
     public function it_throws_exception_for_negative_confidence_threshold(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessage('No result confidence threshold must be between 0 and 100');
 
         $finder = new AiItemFinder();
@@ -270,7 +272,7 @@ class AiItemFinderTest extends TestCase
             ], 401)
         ]);
 
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidApiResponseException::class);
         $this->expectExceptionMessage('Error during OpenAI API request: Invalid API key');
 
         $finder = new AiItemFinder();
@@ -294,7 +296,7 @@ class AiItemFinderTest extends TestCase
             ], 200)
         ]);
 
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidApiResponseException::class);
         $this->expectExceptionMessage('Empty response from OpenAI API');
 
         $finder = new AiItemFinder();
@@ -318,7 +320,7 @@ class AiItemFinderTest extends TestCase
             ], 200)
         ]);
 
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidApiResponseException::class);
         $this->expectExceptionMessage('Picked item is not in the provided list');
 
         $list = [

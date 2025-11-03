@@ -313,17 +313,32 @@ Get the reasoning behind the confidence score of the last match. Returns `string
 
 ## Error Handling
 
-The package throws exceptions in the following cases:
+The package provides specific exception classes for different error scenarios:
 
+### Exception Types
+
+**`InvalidConfigurationException`** - Thrown when configuration is invalid:
 - Missing OpenAI API key
+- Invalid confidence threshold (not between 0-100)
+
+**`InvalidInputException`** - Thrown when input data is invalid:
 - Empty list
 - Missing searched item
-- Invalid confidence threshold (not between 0-100)
-- API errors
-- Invalid API responses
+
+**`InvalidApiResponseException`** - Thrown when the API returns unexpected data:
+- API request errors (authentication, rate limits, etc.)
+- Empty or malformed responses
+- AI returns item not in the provided list
+
+All exceptions extend the base `AiItemFinderException` class, which extends PHP's standard `Exception`.
+
+### Usage Examples
 
 ```php
 use AmiPraha\AiItemFinder\Facades\AiItemFinder;
+use AmiPraha\AiItemFinder\Exceptions\InvalidConfigurationException;
+use AmiPraha\AiItemFinder\Exceptions\InvalidInputException;
+use AmiPraha\AiItemFinder\Exceptions\InvalidApiResponseException;
 
 try {
     $result = AiItemFinder::setList($list)
@@ -337,8 +352,29 @@ try {
         // Process the matched item
         Log::info('Found match: ' . json_encode($result));
     }
-} catch (\Exception $e) {
-    // Handle error
+} catch (InvalidConfigurationException $e) {
+    // Handle configuration errors (API key, invalid thresholds)
+    Log::error('Configuration error: ' . $e->getMessage());
+} catch (InvalidInputException $e) {
+    // Handle input validation errors (empty list, missing search item)
+    Log::error('Invalid input: ' . $e->getMessage());
+} catch (InvalidApiResponseException $e) {
+    // Handle API errors (authentication, rate limits, malformed responses)
+    Log::error('API error: ' . $e->getMessage());
+}
+```
+
+You can also catch all package exceptions using the base exception class:
+
+```php
+use AmiPraha\AiItemFinder\Exceptions\AiItemFinderException;
+
+try {
+    $result = AiItemFinder::setList($list)
+        ->setSearchedItem('name', 'search term')
+        ->find();
+} catch (AiItemFinderException $e) {
+    // Handle any exception from the package
     Log::error('Item search failed: ' . $e->getMessage());
 }
 ```
