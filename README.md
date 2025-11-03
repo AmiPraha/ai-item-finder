@@ -192,6 +192,90 @@ return [
 ];
 ```
 
+## Performance Considerations
+
+### Two-Step Confidence Evaluation
+
+By default, when confidence scoring is enabled (`setAllowNoResult(true)`), the package uses a **two-step approach**:
+
+1. **First API call**: Finds the best matching item from your list
+2. **Second API call**: Evaluates the confidence score for that specific match
+
+This separation provides more accurate and unbiased confidence scores because:
+- The matching task focuses solely on finding the best relative match
+- The confidence evaluation provides an independent, absolute quality assessment
+- Better calibrated scores (avoiding confirmation bias where the LLM justifies its own choice)
+
+However, this comes with performance tradeoffs:
+
+### Cost Implications
+
+- **With confidence scoring enabled** (`setAllowNoResult(true)`): 2 API calls per search
+- **With confidence scoring disabled** (`setAllowNoResult(false)`): 1 API call per search
+
+**Example costs with gpt-4o-mini** (approximate):
+- Single search with confidence: ~$0.0002 - $0.002
+- Single search without confidence: ~$0.0001 - $0.001
+- 1,000 searches/day with confidence: ~$0.20 - $2.00/day
+- 1,000 searches/day without confidence: ~$0.10 - $1.00/day
+
+### Latency Implications
+
+- **With confidence scoring**: ~2-4 seconds (two sequential API calls)
+- **Without confidence scoring**: ~1-2 seconds (single API call)
+
+### Optimizing for High-Volume Scenarios
+
+If you're processing many searches or need faster response times, disable confidence scoring:
+
+```php
+use AmiPraha\AiItemFinder\Facades\AiItemFinder;
+
+$result = AiItemFinder::setList($list)
+    ->setSearchedItem('name', 'search term')
+    ->setAllowNoResult(false) // Disable confidence scoring for better performance
+    ->find();
+
+// Result will always return the best match, using only 1 API call
+```
+
+### When to Use Confidence Scoring
+
+**Enable confidence scoring when:**
+- Quality and accuracy are more important than speed/cost
+- You need to filter out poor matches (e.g., data validation)
+- You're making high-value decisions based on matches
+- Search volume is low to moderate
+- You need access to confidence scores for logging/analytics
+
+**Disable confidence scoring when:**
+- You need fast response times (real-time user interactions)
+- You're processing high volumes (thousands of searches)
+- You trust the AI to always pick the best available match
+- Cost optimization is a priority
+- You're operating in a latency-sensitive environment
+
+### Accessing Confidence Data
+
+When confidence scoring is enabled, you can access the score and reasoning after finding a match:
+
+```php
+use AmiPraha\AiItemFinder\Facades\AiItemFinder;
+
+$finder = AiItemFinder::setList($list)
+    ->setSearchedItem('name', 'search term')
+    ->setAllowNoResult(true);
+
+$result = $finder->find();
+
+if ($result !== null) {
+    $score = $finder->getConfidenceScore(); // 0-100
+    $reasoning = $finder->getConfidenceReasoning(); // Explanation text
+    
+    Log::info("Match found with {$score}% confidence: {$reasoning}");
+}
+```
+
 ## Available Methods
 
 ### `setList(array $list)`
@@ -220,6 +304,12 @@ Set the OpenAI model to use (e.g., 'gpt-4.1', 'gpt-4.1-mini', 'gpt-5').
 
 ### `find()`
 Execute the search and return the closest matching item. Returns `array|null` - the matched item from the list, or `null` if no sufficiently confident match is found (when `allowNoResult` is `true` and confidence is below the threshold).
+
+### `getConfidenceScore()`
+Get the confidence score (0-100) of the last match. Returns `int|null` - the confidence score, or `null` if no match has been performed yet or if confidence scoring was disabled (`setAllowNoResult(false)`). This method should be called after `find()`.
+
+### `getConfidenceReasoning()`
+Get the reasoning behind the confidence score of the last match. Returns `string|null` - a text explanation of why the confidence score was assigned, or `null` if no match has been performed yet or if confidence scoring was disabled. This method should be called after `find()`.
 
 ## Error Handling
 
