@@ -1,0 +1,6 @@
+# Exclude development files from production installs
+/tests export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/phpunit.xml export-ignore
+

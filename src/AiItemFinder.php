@@ -130,6 +130,26 @@ class AiItemFinder
     }
 
     /**
+     * Get the confidence score of the last match
+     *
+     * @return int|null The confidence score (0-100), or null if no match has been performed yet
+     */
+    public function getConfidenceScore(): ?int
+    {
+        return $this->confidenceScore;
+    }
+
+    /**
+     * Get the reasoning behind the confidence score of the last match
+     *
+     * @return string|null The reasoning, or null if no match has been performed yet
+     */
+    public function getConfidenceReasoning(): ?string
+    {
+        return $this->confidenceReasoning;
+    }
+
+    /**
      * Find the closest matching item from the list
      *
      * @return array|null The closest matching item from the list or null if allowNoResult flag is set to true and no close match above the threshold is found
@@ -241,8 +261,7 @@ class AiItemFinder
         ];
 
         $result = $this->getResultFromOpenAIChatCompletion($config);
-        ray($result);
-        ray($config);
+
         return [
             'confidence_score' => $result['confidence_score'],
             'reasoning' => $result['reasoning'],
