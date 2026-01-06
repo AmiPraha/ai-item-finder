@@ -30,7 +30,7 @@ abstract class TestCase extends Orchestra
     {
         // Set up test configuration
         $app['config']->set('ai-item-finder.openai_api_key', 'test-api-key');
-        $app['config']->set('ai-item-finder.model', 'gpt-4o-mini');
+        $app['config']->set('ai-item-finder.model', 'gpt-4.1-mini');
         $app['config']->set('ai-item-finder.api_url', 'https://api.openai.com/v1/chat/completions');
     }
 }

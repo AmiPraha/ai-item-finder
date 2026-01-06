@@ -18,12 +18,13 @@ class AiItemFinder
     protected ?string $searchedItemKey = null;
     protected mixed $searchedItemValue = null;
     protected ?string $additionalInstructions = null;
-    protected ?string $systemMessage = null;
+    protected ?string $customSystemMessage = null;
     protected bool $allowNoResult = true;
     protected int $noResultConfidenceThreshold = 80; // limit under which the result is marked as not relevant (0-100), default 80%
 
     protected ?string $confidenceReasoning = null; // reasoning behind the returned confidence score for the match
     protected ?int $confidenceScore = null; // confidence score for the match (0-100)
+    protected ?array $confidenceEvaluationMatchedItem = null; // matched item used for the confidence evaluation
 
     /**
      * Create a new AiItemFinder instance
@@ -101,9 +102,9 @@ class AiItemFinder
      * @param string $systemMessage Complete custom system message to replace the default one
      * @return self Returns the instance for method chaining
      */
-    public function setSystemMessage(string $systemMessage): self
+    public function setCustomSystemMessage(string $systemMessage): self
     {
-        $this->systemMessage = $systemMessage;
+        $this->customSystemMessage = $systemMessage;
 
         return $this;
     }
@@ -189,6 +190,120 @@ class AiItemFinder
     }
 
     /**
+     * Get the matched item used for the confidence evaluation
+     *
+     * Returns null if:
+     * - No match has been performed yet (find() not called)
+     * - Confidence scoring was disabled (setAllowNoResult(false))
+     *
+     * @return array|null The matched item used for the confidence evaluation, or null if not available
+     */
+    public function getConfidenceEvaluationMatchedItem(): ?array
+    {
+        return $this->confidenceEvaluationMatchedItem;
+    }
+
+    /**
+     * Get the OpenAI model being used
+     *
+     * @return string The OpenAI model name (e.g., 'gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini')
+     */
+    public function getModel(): string
+    {
+        return $this->model;
+    }
+
+    /**
+     * Get the OpenAI API URL
+     *
+     * @return string The OpenAI API URL
+     */
+    public function getApiUrl(): string
+    {
+        return $this->apiUrl;
+    }
+
+    /**
+     * Get the list of items to search through
+     *
+     * @return array The array of items
+     */
+    public function getList(): array
+    {
+        return $this->list;
+    }
+
+    /**
+     * Get the description of the list
+     *
+     * @return string|null The description of what the list items represent, or null if not set
+     */
+    public function getDescriptionOfList(): ?string
+    {
+        return $this->descriptionOfList;
+    }
+
+    /**
+     * Get the searched item key
+     *
+     * @return string|null The key name for the searched item, or null if not set
+     */
+    public function getSearchedItemKey(): ?string
+    {
+        return $this->searchedItemKey;
+    }
+
+    /**
+     * Get the searched item value
+     *
+     * @return mixed The value being searched for, or null if not set
+     */
+    public function getSearchedItemValue(): mixed
+    {
+        return $this->searchedItemValue;
+    }
+
+    /**
+     * Get the additional instructions
+     *
+     * @return string|null The additional instructions for the AI, or null if not set
+     */
+    public function getAdditionalInstructions(): ?string
+    {
+        return $this->additionalInstructions;
+    }
+
+    /**
+     * Get the custom system message override
+     *
+     * @return string|null The custom system message override, or null if using default
+     */
+    public function getSystemMessage(): ?string
+    {
+        return $this->constructSystemMessage();
+    }
+
+    /**
+     * Get whether no result is allowed
+     *
+     * @return bool Whether null results are allowed when confidence is low
+     */
+    public function getAllowNoResult(): bool
+    {
+        return $this->allowNoResult;
+    }
+
+    /**
+     * Get the no result confidence threshold
+     *
+     * @return int The confidence threshold (0-100) below which null is returned
+     */
+    public function getNoResultConfidenceThreshold(): int
+    {
+        return $this->noResultConfidenceThreshold;
+    }
+
+    /**
      * Find the closest matching item from the list
      *
      * Performs AI-powered matching to find the most similar item from the configured list.
@@ -208,14 +323,28 @@ class AiItemFinder
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => $this->getSystemMessage(),
+                    'content' => $this->constructSystemMessage(),
                 ],
                 [
                     'role' => 'user',
                     'content' => $this->getUserMessage(),
                 ],
             ],
-            'response_format' => ['type' => 'json_object'],
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'picked_item_response',
+                    'schema' => [
+                        'type' => 'object',
+                        'properties' => collect($this->list[0])
+                            ->mapWithKeys(
+                                fn($value, $key) => [$key => ['type' => gettype($value)]]
+                            )->toArray(),
+                        'required' => collect($this->list[0])->keys()->toArray(),
+                        'additionalProperties' => true
+                    ]
+                ]
+            ],
         ];
 
         $result = $this->getResultFromOpenAIChatCompletion($config);
@@ -228,6 +357,7 @@ class AiItemFinder
         if ($this->allowNoResult) {
             $matchEvaluation = $this->getConfidenceScoreAndReasoningForMatch($matchedItem);
 
+            $this->confidenceEvaluationMatchedItem = $matchedItem;
             $this->confidenceReasoning = $matchEvaluation['reasoning'];
             $this->confidenceScore = $matchEvaluation['confidence_score'];
 
@@ -255,8 +385,8 @@ class AiItemFinder
         $systemMessage = 'You are a helpful assistant that evaluates the quality of a match between a searched item and a matched item from a list. Provide a confidence score from 1 to 100, where 100 means you are extremely confident this is an excellent match (the items are virtually identical or perfectly align with provided instructions below), and 1 means this is an extremely weak match (minimal or no meaningful correspondence). Use the full range: assign scores close to 100 for strong matches, mid-range scores (40-60) for uncertain or partial matches, and scores close to 1 for very poor matches. '
             . PHP_EOL . 'List items are described as follows: "' . $this->descriptionOfList . '".';
 
-        if (!empty($this->systemMessage)) {
-            $systemMessage .= PHP_EOL . 'Important instructions used for the matching process: "' . $this->systemMessage . '".';
+        if (!empty($this->customSystemMessage)) {
+            $systemMessage .= PHP_EOL . 'Important instructions used for the matching process: "' . $this->customSystemMessage . '".';
         }
 
         if (!empty($this->additionalInstructions)) {
@@ -406,10 +536,10 @@ class AiItemFinder
      *
      * @return string The complete system message for the AI
      */
-    protected function getSystemMessage(): string
+    protected function constructSystemMessage(): string
     {
-        if (!empty($this->systemMessage)) {
-            $systemMessage = $this->systemMessage;
+        if (!empty($this->customSystemMessage)) {
+            $systemMessage = $this->customSystemMessage;
         } else {
             $systemMessage = 'You are helpful assistant who picks the most similar item from a provided json list to a provided json list item. Choose only from the provided list, never invent any non existing item.';
         }

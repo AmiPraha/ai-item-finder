@@ -124,7 +124,7 @@ use AmiPraha\AiItemFinder\Facades\AiItemFinder;
 
 $result = AiItemFinder::setList($list)
     ->setSearchedItem('name', 'search term')
-    ->setSystemMessage('You are an expert at matching products. Find the most similar item.')
+    ->setCustomSystemMessage('You are an expert at matching products. Find the most similar item.')
     ->find();
 ```
 
@@ -257,7 +257,7 @@ $result = AiItemFinder::setList($list)
 
 ### Accessing Confidence Data
 
-When confidence scoring is enabled, you can access the score and reasoning after finding a match:
+When confidence scoring is enabled, you can access the score, reasoning, and the matched item that was evaluated after finding a match:
 
 ```php
 use AmiPraha\AiItemFinder\Facades\AiItemFinder;
@@ -271,8 +271,10 @@ $result = $finder->find();
 if ($result !== null) {
     $score = $finder->getConfidenceScore(); // 0-100
     $reasoning = $finder->getConfidenceReasoning(); // Explanation text
+    $matchedItem = $finder->getConfidenceEvaluationMatchedItem(); // The matched item that was evaluated
     
     Log::info("Match found with {$score}% confidence: {$reasoning}");
+    Log::info("Matched item: " . json_encode($matchedItem));
 }
 ```
 
@@ -290,7 +292,7 @@ Set a description of what the list items represent. This provides additional con
 ### `setAdditionalInstructions(string $instructions)`
 Add additional instructions to guide the AI's matching behavior.
 
-### `setSystemMessage(string $message)`
+### `setCustomSystemMessage(string $message)`
 Override the default system message entirely.
 
 ### `setAllowNoResult(bool $allowNoResult = true)`
@@ -310,6 +312,39 @@ Get the confidence score (0-100) of the last match. Returns `int|null` - the con
 
 ### `getConfidenceReasoning()`
 Get the reasoning behind the confidence score of the last match. Returns `string|null` - a text explanation of why the confidence score was assigned, or `null` if no match has been performed yet or if confidence scoring was disabled. This method should be called after `find()`.
+
+### `getConfidenceEvaluationMatchedItem()`
+Get the matched item that was used for the confidence evaluation. Returns `array|null` - the matched item that was evaluated for confidence scoring, or `null` if no match has been performed yet or if confidence scoring was disabled (`setAllowNoResult(false)`). This method should be called after `find()`. Note that this returns the same item as `find()` when a match is found, but provides access to it even when examining confidence data.
+
+### `getModel()`
+Get the OpenAI model being used. Returns `string` - the OpenAI model name (e.g., 'gpt-4.1-mini', 'gpt-4o', 'gpt-5').
+
+### `getApiUrl()`
+Get the OpenAI API URL. Returns `string` - the API endpoint URL.
+
+### `getList()`
+Get the list of items to search through. Returns `array` - the array of items that was set via `setList()`.
+
+### `getDescriptionOfList()`
+Get the description of the list. Returns `string|null` - the description of what the list items represent, or `null` if not set.
+
+### `getSearchedItemKey()`
+Get the searched item key. Returns `string|null` - the key name for the searched item, or `null` if not set.
+
+### `getSearchedItemValue()`
+Get the searched item value. Returns `mixed` - the value being searched for, or `null` if not set.
+
+### `getAdditionalInstructions()`
+Get the additional instructions. Returns `string|null` - the additional instructions for the AI, or `null` if not set.
+
+### `getSystemMessage()`
+Get the complete system message that will be sent to the AI. Returns `string|null` - the constructed system message including custom message, list description, and additional instructions.
+
+### `getAllowNoResult()`
+Get whether no result is allowed. Returns `bool` - whether `null` results are allowed when confidence is low.
+
+### `getNoResultConfidenceThreshold()`
+Get the no result confidence threshold. Returns `int` - the confidence threshold (0-100) below which `null` is returned.
 
 ## Error Handling
 

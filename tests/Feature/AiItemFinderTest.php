@@ -199,7 +199,7 @@ class AiItemFinderTest extends TestCase
         $finder = new AiItemFinder();
         $result = $finder->setList($list)
             ->setSearchedItem('name', 'A')
-            ->setSystemMessage('Custom system message')
+            ->setCustomSystemMessage('Custom system message')
             ->setAllowNoResult(false)
             ->find();
 
@@ -364,7 +364,8 @@ class AiItemFinderTest extends TestCase
             isset($request['model']) &&
             isset($request['messages']) &&
             isset($request['response_format']) &&
-            $request['response_format']['type'] === 'json_object'
+            $request['response_format']['type'] === 'json_schema' &&
+            isset($request['response_format']['json_schema'])
         );
     }
 }
